@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Online Experiment</title>
+
+  <!-- Load jsPsych and plugins via CDN -->
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.1"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.1.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+</head>
+<body></body>
+
+<script>
+  const jsPsych = initJsPsych({
+    on_finish: function() {
+      const participantID = jsPsych.data.get().first(1).values()[0].participant_id;
+      console.log("Participant ID:", participantID);
+
+      const csvURL = "https://raw.githubusercontent.com/sgormley20/cue_example/refs/heads/main/Randomisation.csv";
+
+      Papa.parse(csvURL, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const data = results.data;
+          console.log("CSV loaded:", data);
+
+          const row = data.find(r => r.ID.trim().toLowerCase() === participantID.trim().toLowerCase());
+
+          if (!row) {
+            alert("ID not found in randomisation file.");
+            return;
+          }
+
+          const randomisation = row.Randomisation.trim().toUpperCase();
+
+          const welcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Welcome to the experiment. Press any key to begin."
+          };
+
+          const random_1 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Randomisation 1."
+          };
+
+          const random_2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Randomisation 2."
+          };
+
+          const random_3 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "Randomisation 3."
+          };
+
+          const end = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: "This is the end of the experiment."
+          };
+
+          const fullTimeline = [welcome];
+
+          if (randomisation === "A") {
+            fullTimeline.push(random_1);
+          } else if (randomisation === "B") {
+            fullTimeline.push(random_2);
+          } else if (randomisation === "C") {
+            fullTimeline.push(random_3);
+          } else {
+            alert("Randomisation value not recognized.");
+            return;
+          }
+
+          fullTimeline.push(end);
+          jsPsych.run(fullTimeline);
+        }
+      });
+    }
+  });
+
+  const getID = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: "<p>Please enter your ID:</p>",
+    html: '<p><label>ID: <input name="participant_id" type="text" required></label></p>',
+    on_finish: function(data) {
+      const participantID = data.response.participant_id;
+      jsPsych.data.addProperties({ participant_id: participantID.trim() });
+      console.log("Participant ID set:", participantID);
+    }
+  };
+
+  jsPsych.run([getID]);
+</script>
+</html>
